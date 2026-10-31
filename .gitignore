@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.idea/
+logs/
+app/**/logs/
+app/core/file_*.log
+docker/embedding/
+docker/*/*_data/
+*.sqlite
+*.db
+.DS_Store

@@ -1,0 +1,9 @@
+[
+  {"id":"q01","question":"查询订单总数","type":"aggregation","expected":"order_count"},
+  {"id":"q02","question":"查询华东地区销售额最高的商品","type":"filter_sort_topk","expected":"product_name,total_sales"},
+  {"id":"q03","question":"查询广东省各商品的订单数量","type":"group_by","expected":"province,product_name,order_count"},
+  {"id":"q04","question":"查询黄金会员的总销售额","type":"filter_aggregation","expected":"member_level,total_sales"},
+  {"id":"q05","question":"查询每个季度的销售额","type":"time_group_by","expected":"quarter,total_sales"},
+  {"id":"q06","question":"查询不存在的指标火星指数","type":"unknown_metric","expected":"graceful_failure"},
+  {"id":"q07","question":"你好，介绍一下你自己","type":"chitchat","expected":"graceful_response"}
+]
