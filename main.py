@@ -13,6 +13,12 @@ app = FastAPI(lifespan=lifespan)
 # 注册路由
 app.include_router(query_router)
 
+
+@app.get("/health")
+async def health():
+    """Lightweight liveness endpoint for local checks and deployment probes."""
+    return {"status": "ok", "service": "danyan-intelligent-data-agent"}
+
 # 整合中间件->设置异步协程上下文变量
 @app.middleware("http")
 async def add_request_cxt_var(request: Request, call_next):
