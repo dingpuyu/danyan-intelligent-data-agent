@@ -33,6 +33,18 @@ docker-compose -f docker/docker-compose.yaml up -d mysql elasticsearch qdrant
 {"query":"统计华东地区销售额最高的三个商品"}
 ```
 
+健康检查：
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+运行基础回归集：
+
+```bash
+./.venv/bin/python evals/run_eval.py --limit 5
+```
+
 ## 目录
 
 - `app/agent`：LangGraph 状态、上下文和工作流节点
@@ -53,3 +65,5 @@ docker-compose -f docker/docker-compose.yaml up -d mysql elasticsearch qdrant
 ## 安全说明
 
 不要把真实 API Key 写进 YAML、代码、日志或提交记录。生产环境还应增加只读数据库账号、SQL AST 白名单、权限过滤和查询超时。
+
+当前版本已经在 EXPLAIN 和真实执行前增加只读 SQL 闸门，SQL 修正后会重新校验，连续失败达到上限后安全结束。

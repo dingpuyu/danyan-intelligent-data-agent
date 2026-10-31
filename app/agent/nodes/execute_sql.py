@@ -4,6 +4,7 @@ from langgraph.runtime import Runtime
 from app.agent.context import DataAgentContext
 from app.agent.state import DataAgentState
 from app.core.log import logger
+from app.security.sql_guard import assert_read_only_sql
 
 
 async def execute_sql(state:DataAgentState,runtime:Runtime[DataAgentContext]):
@@ -13,7 +14,7 @@ async def execute_sql(state:DataAgentState,runtime:Runtime[DataAgentContext]):
     writer({"stage": "执行sql"})
     try:
     # 获取sql语句
-        sql = state["sql"]
+        sql = assert_read_only_sql(state["sql"])
         # repository
         dw_mysql_repository= runtime.context["dw_mysql_repository"]
 
@@ -24,5 +25,5 @@ async def execute_sql(state:DataAgentState,runtime:Runtime[DataAgentContext]):
         logger.info(f"执行sql成功：{result}")
 
     except Exception as e:
-        logger.error(f"执行sql异常：{str()}")
+        logger.error(f"执行sql异常：{str(e)}")
         raise

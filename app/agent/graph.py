@@ -8,6 +8,7 @@ from app.agent.context import DataAgentContext
 from app.agent.nodes.add_extra_context import add_extra_context
 from app.agent.nodes.correct_sql import correct_sql
 from app.agent.nodes.execute_sql import execute_sql
+from app.agent.nodes.fail_sql import fail_sql
 from app.agent.nodes.extract_keywords import extract_keywords
 from app.agent.nodes.filter_metric import filter_metric
 from app.agent.nodes.filter_table import filter_table
@@ -42,6 +43,7 @@ graph_builder.add_node("generate_sql",generate_sql)
 graph_builder.add_node("validata_sql",validata_sql)
 graph_builder.add_node("correct_sql",correct_sql)
 graph_builder.add_node("execute_sql",execute_sql)
+graph_builder.add_node("fail_sql", fail_sql)
 
 # 添加边
 graph_builder.add_edge(START,"extract_keywords")
@@ -62,11 +64,16 @@ graph_builder.add_edge("generate_sql","validata_sql")
 # 处理条件边
 graph_builder.add_conditional_edges(
     "validata_sql",
-    lambda state: "execute_sql" if state["error"] is None else "correct_sql" ,
-    {"correct_sql":"correct_sql","execute_sql":"execute_sql"}
+    lambda state: (
+        "execute_sql" if state.get("error") is None
+        else "fail_sql" if state.get("sql_retry_count", 0) >= 2
+        else "correct_sql"
+    ),
+    {"correct_sql":"correct_sql","execute_sql":"execute_sql","fail_sql":"fail_sql"}
 )
-graph_builder.add_edge("correct_sql","execute_sql")
+graph_builder.add_edge("correct_sql","validata_sql")
 graph_builder.add_edge("execute_sql",END)
+graph_builder.add_edge("fail_sql", END)
 
 # 编译图
 graph = graph_builder.compile()

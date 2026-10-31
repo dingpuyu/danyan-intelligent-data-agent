@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 from app.models.es.value_info_es import ValueInfoEs
 from app.models.qdrant.column_info_qdrant import ColumnInfoQdrant
@@ -41,7 +41,7 @@ class DBInfoState(TypedDict):
     dialect: str
 
 class DataAgentState(TypedDict):
-    error: str
+    error: NotRequired[str | None]
     query: str
     keywords:list[str]
     recall_columns:list[ColumnInfoQdrant]
@@ -51,4 +51,5 @@ class DataAgentState(TypedDict):
     metric_infos:list[MetricInfoState]
     date_info: DateInfoState
     db_info: DBInfoState
-    sql:str
+    sql:NotRequired[str]
+    sql_retry_count: NotRequired[int]
