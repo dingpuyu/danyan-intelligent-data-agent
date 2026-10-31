@@ -57,6 +57,7 @@ curl http://127.0.0.1:8000/health
 - `prompts`：模型提示词
 - `evals/questions.json`：基础评测问题集
 - `docs/项目Wiki.md`：完整项目学习和面试 Wiki
+- `docs/生产级问数架构与实现方案.md`：生产架构、实现路线和上线方案
 
 ## Embedding 说明
 
