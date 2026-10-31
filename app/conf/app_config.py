@@ -84,3 +84,11 @@ app_config: AppConfig = OmegaConf.to_object(OmegaConf.merge(schema, context))
 # a personal key in source files.
 if os.getenv("DEEPSEEK_API_KEY"):
     app_config.llm.api_key = os.environ["DEEPSEEK_API_KEY"]
+
+# Allow an existing local Docker volume to keep its own database credentials
+# while clean installations use the sanitized defaults from app_config.yaml.
+for prefix, db_config in (("DW_DB", app_config.db_dw), ("META_DB", app_config.db_meta)):
+    if os.getenv(f"{prefix}_USER"):
+        db_config.user = os.environ[f"{prefix}_USER"]
+    if os.getenv(f"{prefix}_PASSWORD"):
+        db_config.password = os.environ[f"{prefix}_PASSWORD"]
