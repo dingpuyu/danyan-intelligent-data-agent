@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>大衍智能问数</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b1020; --panel:#121a2d; --line:#263454; --text:#edf2ff; --muted:#95a3c7; --accent:#79a8ff; --user:#244b8f; --bot:#1a2743; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; background: radial-gradient(circle at 20% 0%, #182753 0, var(--bg) 45%); color:var(--text); font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+    .shell { width:min(960px, calc(100% - 32px)); margin:0 auto; padding:32px 0 28px; display:flex; flex-direction:column; min-height:100vh; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:22px; }
+    h1 { font-size:24px; margin:0; letter-spacing:.02em; }
+    .subtitle { color:var(--muted); margin:4px 0 0; }
+    .badge { border:1px solid #355183; color:#a9c7ff; border-radius:999px; padding:4px 10px; font-size:12px; white-space:nowrap; }
+    .chat { flex:1; background:rgba(18,26,45,.84); border:1px solid var(--line); border-radius:18px; padding:20px; box-shadow:0 18px 50px rgba(0,0,0,.22); overflow:auto; min-height:520px; }
+    .message { display:flex; margin:14px 0; }
+    .message.user { justify-content:flex-end; }
+    .bubble { max-width:min(82%, 720px); padding:12px 15px; border-radius:14px; white-space:pre-wrap; word-break:break-word; }
+    .assistant .bubble { background:var(--bot); border:1px solid #2b3a61; }
+    .user .bubble { background:var(--user); }
+    .label { font-size:11px; color:var(--muted); margin-bottom:3px; }
+    .stage { color:#a9c7ff; font-size:13px; margin:5px 0; }
+    pre { margin:9px 0 0; padding:12px; border-radius:10px; background:#090e1b; overflow:auto; color:#d9e4ff; }
+    .composer { display:flex; gap:10px; margin-top:15px; }
+    textarea { flex:1; resize:none; min-height:54px; max-height:150px; border:1px solid var(--line); border-radius:12px; padding:13px; background:#0e1629; color:var(--text); font:inherit; outline:none; }
+    textarea:focus { border-color:var(--accent); }
+    button { border:0; border-radius:12px; padding:0 20px; background:var(--accent); color:#081126; font-weight:700; cursor:pointer; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .examples { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+    .example { background:transparent; border:1px solid var(--line); color:#b8c8ee; padding:6px 10px; font-weight:400; }
+    .empty { color:var(--muted); text-align:center; padding:120px 20px; }
+    @media (max-width:640px) { .shell { width:calc(100% - 20px); padding-top:18px; } .chat { min-height:68vh; padding:12px; } .bubble { max-width:92%; } header { align-items:flex-start; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div><h1>大衍智能问数</h1><p class="subtitle">用自然语言查询业务数据</p></div>
+      <span class="badge">Workflow Agent · SSE</span>
+    </header>
+    <section id="chat" class="chat" aria-live="polite">
+      <div id="empty" class="empty">输入一个问题，例如：统计华东地区销售额最高的三个商品</div>
+    </section>
+    <div class="composer">
+      <textarea id="input" placeholder="问问你的业务数据……" aria-label="问题"></textarea>
+      <button id="send">发送</button>
+    </div>
+    <div class="examples">
+      <button class="example">查询订单总数</button>
+      <button class="example">统计华东地区销售额最高的三个商品</button>
+      <button class="example">统计华东地区的平均订单金额</button>
+    </div>
+  </main>
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('input');
+    const send = document.getElementById('send');
+    const empty = document.getElementById('empty');
+    const add = (role, content, html=false) => {
+      if (empty) empty.remove();
+      const row = document.createElement('div'); row.className = `message ${role}`;
+      const box = document.createElement('div'); box.className = 'bubble';
+      box.innerHTML = `<div class="label">${role === 'user' ? '你' : '大衍'}</div>` + (html ? content : escapeHtml(content));
+      row.appendChild(box); chat.appendChild(row); chat.scrollTop = chat.scrollHeight; return box;
+    };
+    const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    async function ask() {
+      const question = input.value.trim(); if (!question || send.disabled) return;
+      add('user', question); input.value=''; send.disabled=true;
+      const box = add('assistant', '<div class="stage">正在处理……</div>', true);
+      let result = null, error = null;
+      try {
+        const response = await fetch('/api/query', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({query:question}) });
+        if (!response.ok) throw new Error(`接口返回 ${response.status}`);
+        const reader = response.body.getReader(), decoder = new TextDecoder(); let buffer='';
+        while (true) {
+          const {value, done} = await reader.read(); if (done) break;
+          buffer += decoder.decode(value, {stream:true}); const parts = buffer.split('\n'); buffer = parts.pop();
+          for (const line of parts) {
+            if (!line.startsWith('data: ')) continue;
+            const payload = JSON.parse(line.slice(6));
+            if (payload.stage) box.insertAdjacentHTML('beforeend', `<div class="stage">✓ ${escapeHtml(payload.stage)}</div>`);
+            if (payload.result) result = payload.result;
+            if (payload.error) error = payload.error;
+          }
+        }
+        if (error) box.insertAdjacentHTML('beforeend', `<div class="stage">查询失败：${escapeHtml(error)}</div>`);
+        else if (result) box.insertAdjacentHTML('beforeend', `<pre>${escapeHtml(JSON.stringify(result, null, 2))}</pre>`);
+      } catch (err) { box.insertAdjacentHTML('beforeend', `<div class="stage">连接失败：${escapeHtml(err.message)}</div>`); }
+      finally { send.disabled=false; input.focus(); }
+    }
+    send.addEventListener('click', ask);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } });
+    document.querySelectorAll('.example').forEach(btn => btn.addEventListener('click', () => { input.value=btn.textContent; input.focus(); }));
+  </script>
+</body>
+</html>
