@@ -5,6 +5,7 @@ from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from app.agent.context import DataAgentContext
 from app.agent.graph import graph
 from app.agent.state import DataAgentState
+from app.services.query_intent import get_direct_answer
 from app.repositories.es.value_es_repository import ValueEsRepository
 from app.repositories.mysql.dw_mysql_repository import DwMysqlRepository
 from app.repositories.mysql.meta_mysql_repository import MetaMysqlRepository
@@ -28,6 +29,10 @@ class QueryService:
         self.meta_mysql_repository=meta_mysql_repository
         self.dw_mysql_repository=dw_mysql_repository
     async def query(self, query: str):
+        direct_answer = get_direct_answer(query)
+        if direct_answer:
+            yield f"data: {json.dumps({'answer': direct_answer}, ensure_ascii=False)}\n\n"
+            return
         # 创建状态对象
         state = DataAgentState(query=query)
         # 创建上下文对象
@@ -45,4 +50,5 @@ class QueryService:
             async  for chunk in graph.astream(input=state, context=runtime, stream_mode="custom"):
                 yield f"data: {json.dumps(chunk,ensure_ascii=False,default=str)}  \n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'error':str(e)}, ensure_ascii=False, default=str)}  \n\n"
+            detail = str(e).strip() or f"{type(e).__name__}: 下游服务暂时不可用"
+            yield f"data: {json.dumps({'error': detail}, ensure_ascii=False, default=str)}  \n\n"

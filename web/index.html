@@ -47,6 +47,7 @@
       <button id="send">发送</button>
     </div>
     <div class="examples">
+      <button class="example">能提供哪些能力</button>
       <button class="example">查询订单总数</button>
       <button class="example">统计华东地区销售额最高的三个商品</button>
       <button class="example">统计华东地区的平均订单金额</button>
@@ -69,7 +70,7 @@
       const question = input.value.trim(); if (!question || send.disabled) return;
       add('user', question); input.value=''; send.disabled=true;
       const box = add('assistant', '<div class="stage">正在处理……</div>', true);
-      let result = null, error = null;
+      let result = null, answer = null, error = null;
       try {
         const response = await fetch('/api/query', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({query:question}) });
         if (!response.ok) throw new Error(`接口返回 ${response.status}`);
@@ -82,10 +83,12 @@
             const payload = JSON.parse(line.slice(6));
             if (payload.stage) box.insertAdjacentHTML('beforeend', `<div class="stage">✓ ${escapeHtml(payload.stage)}</div>`);
             if (payload.result) result = payload.result;
+            if (payload.answer) answer = payload.answer;
             if (payload.error) error = payload.error;
           }
         }
         if (error) box.insertAdjacentHTML('beforeend', `<div class="stage">查询失败：${escapeHtml(error)}</div>`);
+        else if (answer) box.insertAdjacentHTML('beforeend', `<div>${escapeHtml(answer)}</div>`);
         else if (result) box.insertAdjacentHTML('beforeend', `<pre>${escapeHtml(JSON.stringify(result, null, 2))}</pre>`);
       } catch (err) { box.insertAdjacentHTML('beforeend', `<div class="stage">连接失败：${escapeHtml(err.message)}</div>`); }
       finally { send.disabled=false; input.focus(); }

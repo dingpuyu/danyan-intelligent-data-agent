@@ -71,8 +71,10 @@ async def recall_metric(state:DataAgentState,runtime:Runtime[DataAgentContext]):
 
         return {"recall_metric":recall_metric}
     except Exception as e:
-        logger.error(f"召回指标异常：{str(e)}")
-        raise
+        # 指标召回是增强信息，临时的向量服务抖动不应让基础字段查询整体失败。
+        # 后续过滤节点会在没有指标信息时继续使用字段元数据生成 SQL。
+        logger.error(f"召回指标异常：{type(e).__name__}: {repr(e)}")
+        return {"recall_metric": []}
 
 
 

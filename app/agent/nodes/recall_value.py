@@ -62,5 +62,6 @@ async def recall_value(state:DataAgentState,runtime:Runtime[DataAgentContext]):
         logger.info(f"召回字段取值成功：{list(value_maps.keys())}")
         return {"recall_values":recall_values}
     except Exception as e:
-        logger.error(f"召回字段取值异常{str(e)}")
-        raise
+        # 字段值召回是可选增强能力，失败时保留主链路可用。
+        logger.error(f"召回字段取值异常：{type(e).__name__}: {repr(e)}")
+        return {"recall_values": []}
