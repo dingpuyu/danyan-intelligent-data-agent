@@ -10,6 +10,7 @@ from app.agent.state import DataAgentState
 from app.core.log import logger
 from app.models.qdrant.metric_info_qdrant import MetricInfoQdrant
 from app.prompt.prompt_loader import load_prompt
+from app.conf.retrieval_config import MAX_RECALL_KEYWORDS, RECALL_TOP_K
 
 
 async def recall_metric(state:DataAgentState,runtime:Runtime[DataAgentContext]):
@@ -40,7 +41,7 @@ async def recall_metric(state:DataAgentState,runtime:Runtime[DataAgentContext]):
         result = await chain.ainvoke({"query": query})
 
         # 2.合并关键字
-        keywords = set(keywords+result)
+        keywords = list(dict.fromkeys(keywords + result))[:MAX_RECALL_KEYWORDS]
 
         logger.info(f"扩展后关键字：{[keywords]}")
 
@@ -48,12 +49,12 @@ async def recall_metric(state:DataAgentState,runtime:Runtime[DataAgentContext]):
         retrieved_metric_map:dict[str,MetricInfoQdrant]={}
 
         # 3.召回指标
-        for keyword in keywords:
-            # 转换向量
-            embedding=await embedding_client.aembed_query(keyword)
-
-            # 根据向量查询qdrant中的指标数据
-            payloads:list[MetricInfoQdrant]= await  metric_qdrant_repository.search_embedding(embedding)
+        embeddings = await embedding_client.aembed_documents(keywords)
+        payload_batches = await asyncio.gather(*(
+            metric_qdrant_repository.search_embedding(embedding, limit=RECALL_TOP_K)
+            for embedding in embeddings
+        ))
+        for payloads in payload_batches:
 
             # 处理查询结果-去重
             for payload in payloads:

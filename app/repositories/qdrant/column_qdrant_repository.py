@@ -58,7 +58,7 @@ class ColumnQdrantRepository:
                 points=points
             )
 
-    async def search(self, embeddings:list[float],score_threshold:float= 0.6 ):
+    async def search(self, embeddings:list[float], score_threshold:float = 0.6, limit:int = 10):
 
         """
         根据指定向量召回字段信息列表
@@ -69,7 +69,8 @@ class ColumnQdrantRepository:
         points = await self.client.query_points(
             collection_name=self.collection_name,
             query=embeddings,
-            score_threshold=score_threshold
+            score_threshold=score_threshold,
+            limit=limit,
 
         )
         return [point.payload for point in points.points]

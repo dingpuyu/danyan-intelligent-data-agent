@@ -1,6 +1,7 @@
 from qdrant_client import AsyncQdrantClient, models
 
 from app.conf.app_config import app_config
+from app.conf.retrieval_config import RECALL_SCORE_THRESHOLD
 from app.models.qdrant.metric_info_qdrant import MetricInfoQdrant
 
 
@@ -69,7 +70,7 @@ class MetricQdrantRepository:
         points = await self.client.query_points(
             collection_name=self.collection_name,
             query=embedding,
-            score_threshold=0.6,
+            score_threshold=RECALL_SCORE_THRESHOLD,
             limit=limit
         )
 

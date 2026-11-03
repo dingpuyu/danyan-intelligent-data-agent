@@ -11,6 +11,7 @@ from app.agent.state import DataAgentState
 from app.core.log import logger
 from app.models.qdrant.column_info_qdrant import ColumnInfoQdrant
 from app.prompt.prompt_loader import load_prompt
+from app.conf.retrieval_config import MAX_RECALL_KEYWORDS, RECALL_SCORE_THRESHOLD, RECALL_TOP_K
 
 
 async def recall_column(state:DataAgentState,runtime:Runtime[DataAgentContext]):
@@ -41,17 +42,21 @@ async def recall_column(state:DataAgentState,runtime:Runtime[DataAgentContext]):
         result=await chain.ainvoke({"query":query})
 
         # 1.5 合并关键字
-        keywords =set(keywords+result)
+        keywords = list(dict.fromkeys(keywords + result))[:MAX_RECALL_KEYWORDS]
 
         # 定义字典去重字段对象
         recall_columns_map:dict[str,ColumnInfoQdrant]={}
 
         # 2.召回字段
-        for keyword in keywords:
-            # 2.1 转换向量
-            embeddings=await embedding_client.aembed_query(keyword)
-            # 2.2 根据向量查询qdrant
-            payloads:list[ColumnInfoQdrant]=await column_qdrant_repository.search(embeddings)
+        embeddings = await embedding_client.aembed_documents(keywords)
+        payload_batches = await asyncio.gather(*(
+            column_qdrant_repository.search(
+                embedding,
+                score_threshold=RECALL_SCORE_THRESHOLD,
+                limit=RECALL_TOP_K,
+            ) for embedding in embeddings
+        ))
+        for payloads in payload_batches:
             # 2.3 收集返回结果去重处理
             for payload in payloads:
                 # 获取id

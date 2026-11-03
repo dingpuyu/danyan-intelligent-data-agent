@@ -63,7 +63,7 @@ class ValueEsRepository:
                 operations=operations,
             )
 
-    async def search_value(self, keyword: str):
+    async def search_value(self, keyword: str, size: int = 10):
         """
         根据关键字匹配字段取值
         :param keyword:
@@ -77,6 +77,7 @@ class ValueEsRepository:
                     "value": keyword
                 }
             },
+            size=size,
         )
 
         # 处理结果

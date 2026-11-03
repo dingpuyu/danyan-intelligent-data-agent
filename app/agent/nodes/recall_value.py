@@ -10,6 +10,7 @@ from app.agent.state import DataAgentState
 from app.core.log import logger
 from app.models.es.value_info_es import ValueInfoEs
 from app.prompt.prompt_loader import load_prompt
+from app.conf.retrieval_config import ES_VALUE_SIZE, MAX_RECALL_KEYWORDS
 
 
 async def recall_value(state:DataAgentState,runtime:Runtime[DataAgentContext]):
@@ -38,7 +39,7 @@ async def recall_value(state:DataAgentState,runtime:Runtime[DataAgentContext]):
         result = await chain.ainvoke({"query": query})
 
         # 2.合并关键字
-        keywords = set(keywords + result)
+        keywords = list(dict.fromkeys(keywords + result))[:MAX_RECALL_KEYWORDS]
 
         # 定义map去重收集取值结果
         value_maps:dict[str,ValueInfoEs]={}
@@ -46,7 +47,7 @@ async def recall_value(state:DataAgentState,runtime:Runtime[DataAgentContext]):
         # 3.召回字段取值
         for keyword in keywords:
             # 根据关键字查询es 字段取值
-            values:list[ValueInfoEs] = await value_es_repository.search_value(keyword)
+            values:list[ValueInfoEs] = await value_es_repository.search_value(keyword, size=ES_VALUE_SIZE)
             # 处理返回结果
             for value in values:
                 # 获取取值的id
